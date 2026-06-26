@@ -8,8 +8,8 @@ st.set_page_config(page_title="Sistema Centralizado de Cotejo", page_icon="🚨"
 st.title("🚨 Sistema Centralizado de Cotejo - Terremoto Venezuela")
 st.write("Esta plataforma lee en tiempo real los datos recopilados en la nube y busca coincidencias automáticamente.")
 
-# ENLACES A TUS HOJAS DE GOOGLE DRIVE (Asegúrate de cambiar estos links por los tuyos)
-URL_DESAPARECIDOS = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPIGqCgtWCvoJGyL5xSrNCbY8ADmo_pmt4/export?format=csv&sheet=PestañaDesaparecidos"
+# ENLACES CORREGIDOS CON TU ID REAL DE GOOGLE SHEETS
+URL_DESAPARECIDOS = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPIGqCgtWCvoJGyL5xSrNCbY8ADmo_pmt4/export?format=csv&sheet=Form_Responses"
 URL_HOSPITALES = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPIGqCgtWCvoJGyL5xSrNCbY8ADmo_pmt4/export?format=csv&sheet=PestañaHospitales"
 
 if st.button("🔄 Actualizar y Sincronizar Datos de la Nube"):
@@ -36,7 +36,7 @@ df_hospitales_raw = cargar_datos(URL_HOSPITALES)
 st.sidebar.header("🔍 Buscador de Personas")
 termino_busqueda = st.sidebar.text_input(
     "Buscar por Nombre, Apellido o Cédula:", 
-    placeholder="Ej: Juan Pérez o 12345678"
+    placeholder="Ej: KEKVIN ACOSTA o 11344630"
 ).strip().lower()
 
 def filtrar_por_termino(df, termino):
@@ -47,11 +47,11 @@ def filtrar_por_termino(df, termino):
         mascara |= df[col].astype(str).str.lower().str.contains(termino, na=False)
     return df[mascara]
 
-# Filtrar datos de acuerdo al buscador para los contadores
+# Filtrar datos para los contadores
 df_desaparecidos_filtrados = filtrar_por_termino(df_desaparecidos_raw, termino_busqueda)
 df_hospitales_filtrados = filtrar_por_termino(df_hospitales_raw, termino_busqueda)
 
-# 2. Mostrar contadores principales totales (o filtrados si se busca algo)
+# 2. Mostrar contadores principales dinámicos
 col1, col2 = st.columns(2)
 with col1:
     st.metric("Total Desaparecidos Reportados", len(df_desaparecidos_filtrados))
@@ -66,8 +66,13 @@ st.subheader("📊 Posibles Coincidencias Detectadas")
 coincidencias = []
 
 if not df_desaparecidos_raw.empty and not df_hospitales_raw.empty:
-    col_nom_des = df_desaparecidos_raw.columns[0]
-    col_nom_hosp = df_hospitales_raw.columns[0]
+    # Detectar la columna de nombres de desaparecidos (búsqueda flexible por palabra clave)
+    col_nom_des = [c for c in df_desaparecidos_raw.columns if "nombre" in c.lower() or "persona" in c.lower()]
+    col_nom_des = col_nom_des[0] if col_nom_des else df_desaparecidos_raw.columns[0]
+    
+    # Detectar la columna de nombres de hospitales
+    col_nom_hosp = [c for c in df_hospitales_raw.columns if "nombre" in c.lower() or "persona" in c.lower()]
+    col_nom_hosp = col_nom_hosp[0] if col_nom_hosp else df_hospitales_raw.columns[0]
     
     for _, des in df_desaparecidos_raw.iterrows():
         nombre_des = str(des[col_nom_des]).strip()
@@ -79,11 +84,10 @@ if not df_desaparecidos_raw.empty and not df_hospitales_raw.empty:
             if not nombre_hosp or nombre_hosp.lower() == "nan":
                 continue
                 
-            # Calcular nivel de similitud entre nombres
+            # Calcular nivel de similitud entre nombres completo
             score = fuzz.token_sort_ratio(nombre_des.lower(), nombre_hosp.lower())
             
             if score >= 70:
-                # Si hay una búsqueda activa, verificar que la coincidencia incluya el término
                 if termino_busqueda:
                     match_en_datos = (termino_busqueda in nombre_des.lower() or 
                                      termino_busqueda in nombre_hosp.lower() or 
