@@ -16,7 +16,7 @@ URL_DESAPARECIDOS = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPIGqCgtWC
 
 # NOTA PARA HOSPITALES: Abre tu hoja de Hospitales en el navegador, mira el final del enlace
 # y cambia el número de abajo (donde dice gid=0) por el número real de esa pestaña.
-URL_HOSPITALES = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPIGqCgtWCvoJGyL5xSrNCbY8ADmo_pmt4/export?format=csv&gid=0"
+URL_HOSPITALES = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPIGqCgtWCvoJGyL5xSrNCbY8ADmo_pmt4/export?format=csv&gid=1289107857"
 
 
 if st.button("🔄 Actualizar y Sincronizar Datos de la Nube"):
