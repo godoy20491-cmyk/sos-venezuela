@@ -8,7 +8,7 @@ st.set_page_config(page_title="Sistema Centralizado de Cotejo", page_icon="🚨"
 st.title("🚨 Sistema Centralizado de Cotejo - Terremoto Venezuela")
 st.write("Esta plataforma lee en tiempo real los datos recopilados desde los formularios web móviles y busca coincidencias automáticamente.")
 
-# Enlaces reales a tu Google Sheets "BD_Terremoto_Venezuela"
+# Enlaces corregidos y estables a tu Google Sheets "BD_Terremoto_Venezuela"
 URL_DESAPARECIDOS = "https://docs.google.com/spreadsheets/d/1Xv3R_uLh8HymK6pIsXg9xSjO-zEwB0T6y2G8Lp_S3Z0/gviz/tq?tqx=out:csv&sheet=Desaparecidos"
 URL_HOSPITALES = "https://docs.google.com/spreadsheets/d/1Xv3R_uLh8HymK6pIsXg9xSjO-zEwB0T6y2G8Lp_S3Z0/gviz/tq?tqx=out:csv&sheet=Hospitales"
 
@@ -21,6 +21,9 @@ def cargar_datos(url):
         df = pd.read_csv(url)
         # Limpiar espacios en los nombres de las columnas
         df.columns = [c.strip() for c in df.columns]
+        # Eliminar filas donde falten datos esenciales para evitar los "nan"
+        if not df.empty:
+            df = df.dropna(how='all')
         return df
     except Exception as e:
         return pd.DataFrame()
@@ -38,26 +41,20 @@ termino_busqueda = st.sidebar.text_input(
     placeholder="Ej: Juan Pérez o 12345678"
 ).strip().lower()
 
-# Función auxiliar para filtrar DataFrames de forma dinámica
+# Función para filtrar dinámicamente
 def filtrar_por_termino(df, termino):
     if df.empty or not termino:
         return df
-    
-    # Crear una máscara bo码fica buscando en todas las columnas de texto
     mascara = pd.Series(False, index=df.index)
     for col in df.columns:
         mascara |= df[col].astype(str).str.lower().str.contains(termino, na=False)
-    
     return df[mascara]
 
-# Aplicar el filtro si el usuario escribió algo
+# Aplicar filtros del buscador
 df_desaparecidos = filtrar_por_termino(df_desaparecidos_raw, termino_busqueda)
 df_hospitales = filtrar_por_termino(df_hospitales_raw, termino_busqueda)
 
-if termino_busqueda:
-    st.sidebar.success(f"Filtrando por: '{termino_busqueda}'")
-
-# 2. Mostrar contadores principales (dinámicos según la búsqueda)
+# 2. Mostrar contadores principales
 col1, col2 = st.columns(2)
 with col1:
     st.metric("Total Desaparecidos Reportados", len(df_desaparecidos))
@@ -66,7 +63,7 @@ with col2:
 
 st.markdown("---")
 
-# 3. Sección de Coincidencias Inteligentes (usa la base de datos completa para no perder cruces)
+# 3. Sección de Coincidencias Inteligentes
 st.subheader("📊 Posibles Coincidencias Detectadas")
 
 coincidencias = []
@@ -78,26 +75,39 @@ if not df_desaparecidos_raw.empty and not df_hospitales_raw.empty:
 
     for _, des in df_desaparecidos_raw.iterrows():
         nombre_des = str(des[col_nom_des]).strip()
+        nombre_hosp_original = str(des[df_desaparecidos_raw.columns[2]]).strip() if len(df_desaparecidos_raw.columns) > 2 else ""
+        
+        # Combinar si el formulario separa nombre y apellido
+        if nombre_hosp_original and nombre_hosp_original.lower() != 'nan':
+            nombre_des = f"{nombre_des} {nombre_hosp_original}"
+
+        if nombre_des.lower() == 'nan' or not nombre_des:
+            continue
+
         for _, hosp in df_hospitales_raw.iterrows():
             nombre_hosp = str(hosp[col_nom_hosp]).strip()
-            lugar = str(hosp[col_lugar_hosp]).strip()
+            apellido_hosp = str(hosp[df_hospitales_raw.columns[2]]).strip() if len(df_hospitales_raw.columns) > 2 else ""
+            
+            if apellido_hosp and apellido_hosp.lower() != 'nan':
+                nombre_hosp = f"{nombre_hosp} {apellido_hosp}"
+                
+            lugar = str(hosp.iloc[-1]).strip() # Toma la última columna como ubicación si varía
+            
+            if nombre_hosp.lower() == 'nan' or not nombre_hosp:
+                continue
             
             score = fuzz.token_sort_ratio(nombre_des.lower(), nombre_hosp.lower())
             
-            if score >= 75:
-                # Si hay término de búsqueda, verificar si esta coincidencia aplica
+            if score >= 70: # Umbral optimizado para nombres compuestos
                 if termino_busqueda:
-                    match_termino = (termino_busqueda in nombre_des.lower() or 
-                                     termino_busqueda in nombre_hosp.lower() or 
-                                     termino_busqueda in str(des).lower() or 
-                                     termino_busqueda in str(hosp).lower())
-                    if not match_termino:
+                    if (termino_busqueda not in nombre_des.lower() and 
+                        termino_busqueda not in nombre_hosp.lower()):
                         continue
                 
                 coincidencias.append({
                     "Nombre en Reporte": nombre_des,
                     "Nombre en Hospital": nombre_hosp,
-                    "Ubicación / Hospital": lugar,
+                    "Detalles / Ubicación": lugar,
                     "Similitud": f"{score}%"
                 })
 
@@ -105,7 +115,7 @@ if coincidencias:
     df_coincide = pd.DataFrame(coincidencias)
     st.dataframe(df_coincide, use_container_width=True)
 else:
-    st.info("No se detectan coincidencias bajo el umbral actual o el criterio de búsqueda.")
+    st.info("No se detectan coincidencias bajo el umbral actual.")
 
 st.markdown("---")
 
@@ -116,18 +126,14 @@ tab1, tab2 = st.tabs(["👤 Desaparecidos Reportados", "🏥 Pacientes en Hospit
 
 with tab1:
     if not df_desaparecidos.empty:
-        st.write("Resultados en la lista de personas buscadas:")
         col_nom = df_desaparecidos.columns[1] if len(df_desaparecidos.columns) > 1 else df_desaparecidos.columns[0]
-        df_des_ordenado = df_desaparecidos.sort_values(by=col_nom, ascending=True)
-        st.dataframe(df_des_ordenado, use_container_width=True, hide_index=True)
+        st.dataframe(df_desaparecidos.sort_values(by=col_nom, ascending=True), use_container_width=True, hide_index=True)
     else:
-        st.warning("No se encontraron registros de personas desaparecidas con ese criterio.")
+        st.warning("No hay registros que coincidan.")
 
 with tab2:
     if not df_hospitales.empty:
-        st.write("Resultados en la lista de pacientes ingresados:")
         col_nom_h = df_hospitales.columns[1] if len(df_hospitales.columns) > 1 else df_hospitales.columns[0]
-        df_hosp_ordenado = df_hospitales.sort_values(by=col_nom_h, ascending=True)
-        st.dataframe(df_hosp_ordenado, use_container_width=True, hide_index=True)
+        st.dataframe(df_hospitales.sort_values(by=col_nom_h, ascending=True), use_container_width=True, hide_index=True)
     else:
-        st.warning("No se encontraron registros de pacientes que coincidan con la búsqueda.")
+        st.warning("No hay registros que coincidan.")
