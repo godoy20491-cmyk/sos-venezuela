@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import re
 from thefuzz import fuzz
 
 # 1. Configuración de la interfaz
@@ -9,13 +10,23 @@ st.title("🚨 Sistema Centralizado de Cotejo - Terremoto Venezuela")
 st.write("Esta plataforma lee en tiempo real los datos recopilados en la nube y busca coincidencias automáticamente.")
 
 # =========================================================================================
-# ENLACES NUEVOS (REEMPLAZA 'TU_NUEVO_ID_AQUI' POR EL ID DE TU NUEVA HOJA)
+# ENLACES CORREGIDOS CON LOS GID EXACTOS DE TU NUEVA HOJA "Filtro_Terremoto"
 # =========================================================================================
-URL_DESAPARECIDOS = "https://docs.google.com/spreadsheets/d/1p6vDGsLFgwNrE_M3jx2yKOgHLW5dzzu8k1ObsYAnpZ8/export?format=csv&sheet=Desaparecidos"
-URL_HOSPITALES = "https://docs.google.com/spreadsheets/d/1p6vDGsLFgwNrE_M3jx2yKOgHLW5dzzu8k1ObsYAnpZ8/export?format=csv&sheet=Hospitales"
+# Pestaña: Desaparecidos (gid=0)
+URL_DESAPARECIDOS = "https://docs.google.com/spreadsheets/d/1p6vDGsLFgWNrE_M3jx2yKOgHLW5dzzu8k1ObsYAnpZ8/export?format=csv&gid=0"
+
+# Pestaña: Hospitales (gid=1039276610)
+URL_HOSPITALES = "https://docs.google.com/spreadsheets/d/1p6vDGsLFgWNrE_M3jx2yKOgHLW5dzzu8k1ObsYAnpZ8/export?format=csv&gid=1039276610"
+
 
 if st.button("🔄 Actualizar y Sincronizar Datos de la Nube"):
     st.cache_data.clear()
+
+# Función para limpiar enumeraciones de la lista de hospitales: "1. Adrian Diaz" -> "Adrian Diaz"
+def limpiar_nombre(texto):
+    texto = str(texto).strip()
+    texto_limpio = re.sub(r'^\d+[\s\.\)\-]*', '', texto)
+    return texto_limpio.strip()
 
 @st.cache_data
 def cargar_datos(url):
@@ -28,7 +39,7 @@ def cargar_datos(url):
     except Exception as e:
         return pd.DataFrame()
 
-# Carga de las nuevas listas limpias
+# Carga en vivo de las dos listas totalmente separadas
 df_desaparecidos_raw = cargar_datos(URL_DESAPARECIDOS)
 df_hospitales_raw = cargar_datos(URL_HOSPITALES)
 
@@ -52,7 +63,7 @@ def filtrar_por_termino(df, termino):
 df_desaparecidos_filtrados = filtrar_por_termino(df_desaparecidos_raw, termino_busqueda)
 df_hospitales_filtrados = filtrar_por_termino(df_hospitales_raw, termino_busqueda)
 
-# 2. Contadores en pantalla
+# 2. Contadores en pantalla dinámicos
 col1, col2 = st.columns(2)
 with col1:
     st.metric("Total Desaparecidos Reportados", len(df_desaparecidos_filtrados))
@@ -67,8 +78,13 @@ st.subheader("📊 Posibles Coincidencias Detectadas")
 coincidencias = []
 
 if not df_desaparecidos_raw.empty and not df_hospitales_raw.empty:
-    col_nom_des = df_desaparecidos_raw.columns[0]
-    col_nom_hosp = df_hospitales_raw.columns[0]
+    # Ajustamos dinámicamente los nombres de tus columnas reales
+    col_nom_des = df_desaparecidos_raw.columns[0] # "Nombre y Apellidos"
+    col_nom_hosp = df_hospitales_raw.columns[0]   # "Nombre y apellido"
+    
+    # Intentar buscar columna de locación si existe
+    col_lugar_hosp = [c for c in df_hospitales_raw.columns if "hospital" in c.lower() or "clinica" in c.lower()]
+    col_lugar_hosp = col_lugar_hosp[0] if col_lugar_hosp else None
     
     for _, des in df_desaparecidos_raw.iterrows():
         nombre_des = str(des[col_nom_des]).strip()
@@ -76,11 +92,13 @@ if not df_desaparecidos_raw.empty and not df_hospitales_raw.empty:
             continue
             
         for _, hosp in df_hospitales_raw.iterrows():
-            nombre_hosp = str(hosp[col_nom_hosp]).strip()
+            nombre_hosp_raw = str(hosp[col_nom_hosp]).strip()
+            nombre_hosp = limpiar_nombre(nombre_hosp_raw)
+            
             if not nombre_hosp or nombre_hosp.lower() == "nan":
                 continue
                 
-            # Comparación inteligente de los textos
+            # Comparación inteligente cruzada (Fuzz Match)
             score = fuzz.token_sort_ratio(nombre_des.lower(), nombre_hosp.lower())
             
             if score >= 70:
@@ -92,9 +110,12 @@ if not df_desaparecidos_raw.empty and not df_hospitales_raw.empty:
                     if not match_en_datos:
                         continue
                 
+                ubicacion = str(hosp[col_lugar_hosp]) if col_lugar_hosp else "Centro Registrado"
+                
                 coincidencias.append({
                     "Nombre en Reporte Desaparecido": nombre_des,
                     "Nombre Detectado en Hospital": nombre_hosp,
+                    "Ubicación / Centro de Salud": ubicacion,
                     "Similitud de Coincidencia": f"{score}%"
                 })
 
