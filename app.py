@@ -10,7 +10,7 @@ st.write("Esta plataforma lee en tiempo real los datos recopilados desde los for
 
 # Enlaces corregidos y estables a tu Google Sheets "BD_Terremoto_Venezuela"
 URL_DESAPARECIDOS = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPlGqCgtWCvoJGyL5xSrNCbY8ADmo_pmt4/edit?gid=535848279#gid=535848279"
-URL_HOSPITALES = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_u01O2VvX1P2pS2Mcl9N5FpEfZm9Gv8pL5k1v7mN2VpMCl1v7mN2VpMCl1v7mN2VpMCl1v7mN2VpMCl1v7/pub?output=csv"
+URL_HOSPITALES = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPlGqCgtWCvoJGyL5xSrNCbY8ADmo_pmt4/edit?gid=1289107857#gid=1289107857"
 
 if st.button("🔄 Actualizar y Sincronizar Datos de la Nube"):
     st.cache_data.clear()
