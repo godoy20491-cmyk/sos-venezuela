@@ -8,9 +8,16 @@ st.set_page_config(page_title="Sistema Centralizado de Cotejo", page_icon="🚨"
 st.title("🚨 Sistema Centralizado de Cotejo - Terremoto Venezuela")
 st.write("Esta plataforma lee en tiempo real los datos recopilados en la nube y busca coincidencias automáticamente.")
 
-# ENLACES CORREGIDOS CON TU ID REAL DE GOOGLE SHEETS
-URL_DESAPARECIDOS = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPIGqCgtWCvoJGyL5xSrNCbY8ADmo_pmt4/export?format=csv&sheet=Form_Responses"
-URL_HOSPITALES = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPIGqCgtWCvoJGyL5xSrNCbY8ADmo_pmt4/export?format=csv&sheet=PestañaHospitales"
+# =========================================================================================
+# ENLACES CORREGIDOS USANDO EL ID DE TU DOCUMENTO Y EL "GID" DE TU PESTAÑA REAL
+# =========================================================================================
+# URL de Desaparecidos basada exactamente en tu captura con la pestaña Form_Responses (gid=535848279)
+URL_DESAPARECIDOS = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPIGqCgtWCvoJGyL5xSrNCbY8ADmo_pmt4/export?format=csv&gid=535848279"
+
+# NOTA PARA HOSPITALES: Abre tu hoja de Hospitales en el navegador, mira el final del enlace
+# y cambia el número de abajo (donde dice gid=0) por el número real de esa pestaña.
+URL_HOSPITALES = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPIGqCgtWCvoJGyL5xSrNCbY8ADmo_pmt4/export?format=csv&gid=0"
+
 
 if st.button("🔄 Actualizar y Sincronizar Datos de la Nube"):
     st.cache_data.clear()
@@ -19,7 +26,9 @@ if st.button("🔄 Actualizar y Sincronizar Datos de la Nube"):
 def cargar_datos(url):
     try:
         df = pd.read_csv(url)
+        # Limpiar espacios ocultos en los encabezados de las columnas
         df.columns = [c.strip() for c in df.columns]
+        # Filtrar y eliminar filas completamente vacías
         df = df.dropna(how='all')
         df = df.fillna("")
         return df
@@ -47,7 +56,7 @@ def filtrar_por_termino(df, termino):
         mascara |= df[col].astype(str).str.lower().str.contains(termino, na=False)
     return df[mascara]
 
-# Filtrar datos para los contadores
+# Filtrar datos de acuerdo al buscador para modificar los contadores en vivo
 df_desaparecidos_filtrados = filtrar_por_termino(df_desaparecidos_raw, termino_busqueda)
 df_hospitales_filtrados = filtrar_por_termino(df_hospitales_raw, termino_busqueda)
 
@@ -66,11 +75,10 @@ st.subheader("📊 Posibles Coincidencias Detectadas")
 coincidencias = []
 
 if not df_desaparecidos_raw.empty and not df_hospitales_raw.empty:
-    # Detectar la columna de nombres de desaparecidos (búsqueda flexible por palabra clave)
+    # Buscar de manera flexible la columna que contenga el nombre de la persona
     col_nom_des = [c for c in df_desaparecidos_raw.columns if "nombre" in c.lower() or "persona" in c.lower()]
     col_nom_des = col_nom_des[0] if col_nom_des else df_desaparecidos_raw.columns[0]
     
-    # Detectar la columna de nombres de hospitales
     col_nom_hosp = [c for c in df_hospitales_raw.columns if "nombre" in c.lower() or "persona" in c.lower()]
     col_nom_hosp = col_nom_hosp[0] if col_nom_hosp else df_hospitales_raw.columns[0]
     
@@ -84,7 +92,7 @@ if not df_desaparecidos_raw.empty and not df_hospitales_raw.empty:
             if not nombre_hosp or nombre_hosp.lower() == "nan":
                 continue
                 
-            # Calcular nivel de similitud entre nombres completo
+            # Medir la similitud de los textos
             score = fuzz.token_sort_ratio(nombre_des.lower(), nombre_hosp.lower())
             
             if score >= 70:
