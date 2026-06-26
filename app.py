@@ -9,8 +9,8 @@ st.title("🚨 Sistema Centralizado de Cotejo - Terremoto Venezuela")
 st.write("Esta plataforma lee en tiempo real los datos recopilados desde los formularios web móviles y busca coincidencias automáticamente.")
 
 # Enlaces reales a tu Google Sheets "BD_Terremoto_Venezuela"
-URL_DESAPARECIDOS = "https://docs.google.com/spreadsheets/d/1Xv3R_uLh8HymK6pIsXg9xSjO-zEwB0T6y2G8Lp_S3Z0/gviz/tq?tqx=out:csv&sheet=Desaparecidos"
-URL_HOSPITALES = "https://docs.google.com/spreadsheets/d/1Xv3R_uLh8HymK6pIsXg9xSjO-zEwB0T6y2G8Lp_S3Z0/gviz/tq?tqx=out:csv&sheet=Hospitales"
+URL_DESAPARECIDOS = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPlGqCgtWCvoJGyL5xSrNCbY8ADmo_pmt4/edit?gid=535848279#gid=535848279"
+URL_HOSPITALES = "https://docs.google.com/spreadsheets/d/1qvqPo-D5VtPlGqCgtWCvoJGyL5xSrNCbY8ADmo_pmt4/edit?gid=1289107857#gid=1289107857"
 
 if st.button("🔄 Actualizar y Sincronizar Datos de la Nube"):
     st.cache_data.clear()
