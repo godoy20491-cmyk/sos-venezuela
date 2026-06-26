@@ -97,3 +97,44 @@ with tab2:
         st.dataframe(df_hosp_ordenado, use_container_width=True)
     else:
         st.warning("Aún no hay registros de pacientes en hospitales.")
+# ==========================================
+# 4. LISTAS DE PERSONAS REGISTRADAS EN EL SISTEMA
+# ==========================================
+st.markdown("---")
+st.header("📋 Listas de Personas Registradas en el Sistema")
+
+# Crear pestañas para separar Desaparecidos de Pacientes
+tab_desaparecidos, tab_hospitales = st.tabs([
+    "👤 Desaparecidos Reportados", 
+    "🏥 Pacientes en Hospitales"
+])
+
+# --- PESTAÑA: DESAPARECIDOS ---
+with tab_desaparecidos:
+    if not df_desaparecidos.empty:
+        # Asegurar que existan las columnas clave y limpiar nombres
+        columnas_des = [c for c in ['Nombre', 'Apellido', 'Edad', 'Estado', 'Teléfono de Contacto'] if c in df_desaparecidos.columns]
+        df_des_ver = df_desaparecidos[columnas_des].copy()
+        
+        # Ordenar alfabéticamente por Nombre
+        if 'Nombre' in df_des_ver.columns:
+            df_des_ver = df_des_ver.sort_values(by='Nombre')
+            
+        st.dataframe(df_des_ver, use_container_width=True, hide_index=True)
+    else:
+        st.warning("Aún no hay registros de personas desaparecidas.")
+
+# --- PESTAÑA: PACIENTES EN HOSPITALES ---
+with tab_hospitales:
+    if not df_hospitales.empty:
+        # Asegurar que existan las columnas clave y limpiar nombres
+        columnas_hosp = [c for c in ['Nombre', 'Apellido', 'Edad', 'Hospital / Centro Médico', 'Condición', 'Estado'] if c in df_hospitales.columns]
+        df_hosp_ver = df_hospitales[columnas_hosp].copy()
+        
+        # Ordenar alfabéticamente por Nombre
+        if 'Nombre' in df_hosp_ver.columns:
+            df_hosp_ver = df_hosp_ver.sort_values(by='Nombre')
+            
+        st.dataframe(df_hosp_ver, use_container_width=True, hide_index=True)
+    else:
+        st.warning("Aún no hay registros de pacientes en hospitales.")
